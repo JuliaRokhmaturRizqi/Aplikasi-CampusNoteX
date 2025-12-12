@@ -1,5 +1,5 @@
 // src/screens/Notes/NotesList.jsx
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,81 +7,97 @@ import {
   TextInput,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 import HeaderHome from "../Home/components/HeaderHome";
 import BottomNavigationBar from "../../components/BottomNavigationBar";
 
+const STORAGE_KEY = "CAMPUSNOTEX_NOTES_v1";
 const PRIMARY_BLUE = "#0D47A1";
-// pastikan file assets/catatan.jpg ada dan path ini benar
-const catatanImg = require("../../../assets/catatan.jpg");
 
-/**
- * NOTES DATA berada di luar komponen supaya tidak diciptakan ulang setiap render.
- * (Fungsi & layout tidak berubah — hanya efisiensi kecil saja.)
- */
-const INITIAL_NOTES = [
+// contoh data fallback (dipakai hanya saat storage kosong)
+const FALLBACK_NOTES = [
   {
+    id: "n1",
     title: "Revisi: BAB I - Latar Belakang",
     body:
-      "Dosen meminta agar bagian latar belakang lebih fokus pada urgensi penelitian. Penjelasan mengenai masalah utama harus dibuat lebih tegas. Selain itu, perlu ditambahkan data statistik terbaru yang mendukung kondisi di lapangan. Bagian ruang lingkup penelitian juga perlu dipersempit agar tidak terlalu luas dan lebih mudah dianalisis pada bab berikutnya.",
+      "Dosen meminta agar bagian latar belakang lebih fokus pada urgensi penelitian. Penjelasan mengenai masalah utama harus dibuat lebih tegas...",
     time: "56 menit yang lalu",
     category: "Revisi",
   },
   {
+    id: "n2",
     title: "Ide: Bab 3 - Sistem Keamanan",
     body:
-      "Terpikir sebuah kemungkinan untuk mengangkat topik keamanan dalam aplikasi mobile berbasis enkripsi hybrid. Ide awalnya adalah membandingkan enkripsi simetris dan asimetris, lalu menguji keduanya dalam konteks aplikasi kampus. Jika memungkinkan, bagian implementasi akan memasukkan studi kasus kecil yang mudah dipahami. Catatan ini masih harus didiskusikan lebih lanjut.",
+      "Terpikir sebuah kemungkinan untuk mengangkat topik keamanan dalam aplikasi mobile berbasis enkripsi hybrid...",
     time: "2 menit yang lalu",
     category: "Ide",
-  },
-  {
-    title: "Bimbingan: Pemrograman Lanjut",
-    body:
-      "Catatan bimbingan minggu ini lumayan padat. Dosen menekankan pentingnya arsitektur modular agar aplikasi tidak mudah berantakan saat fitur bertambah. Aku diminta memastikan setiap folder memiliki peran jelas, seperti screens, components, hooks, dan utils. Selain itu, navigasi harus dibuat konsisten memakai stack dan tab. Untuk progress minggu depan, harus menyiapkan halaman detail dan form edit catatan.",
-    time: "1 hari yang lalu",
-    category: "Bimbingan",
-    attachment: catatanImg,
-  },
-  {
-    title: "Magang: Update Laporan Mingguan",
-    body:
-      "Pada laporan magang kali ini, pembimbing meminta tambahan bagian evaluasi hasil pengerjaan fitur. Khususnya mengenai API endpoint yang sempat error karena format respons berubah. Selain itu, bagian dokumentasi UI perlu ditambahkan screenshot terbaru agar memudahkan tim QA memahami perubahan layout. Semua perbaikan harus selesai sebelum Jumat.",
-    time: "7 menit yang lalu",
-    category: "Magang",
-  },
-  {
-    title: "Revisi: Landasan Teori",
-    body:
-      "Dosen meminta agar landasan teori menggunakan minimal sembilan jurnal terbitan lima tahun terakhir. Fokuskan pada teori yang benar-benar relevan dengan permasalahan. Jangan memasukkan teori yang tidak mendukung alur pembahasan. Pastikan setiap kutipan diberi penjelasan agar tidak tampak tempelan semata. Sumber buku boleh, tapi prioritas tetap jurnal.",
-    time: "56 menit yang lalu",
-    category: "Revisi",
   },
 ];
 
 export default function NotesList() {
   const navigation = useNavigation();
 
-  // states (kondisi & input dari user)
+  const [notes, setNotes] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const [activeChip, setActiveChip] = useState("Semua");
   const [searchText, setSearchText] = useState("");
 
   const chips = ["Semua", "Revisi", "Ide", "Magang", "Bimbingan"];
 
-  // gunakan useMemo agar filtering tidak dihitung ulang kecuali dependensi berubah
+  // load notes dari AsyncStorage
+  const loadNotes = async () => {
+    setLoading(true);
+    try {
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      let arr = raw ? JSON.parse(raw) : null;
+      if (!arr || !Array.isArray(arr) || arr.length === 0) {
+        // jika kosong, gunakan fallback dan simpan fallback supaya persist
+        arr = FALLBACK_NOTES;
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(arr));
+      }
+      setNotes(arr);
+    } catch (e) {
+      console.warn("load notes err", e);
+      setNotes(FALLBACK_NOTES);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // muat sekali saat mount
+  useEffect(() => {
+    loadNotes();
+  }, []);
+
+  // reload setiap kali screen fokus (mis. setelah kembali dari AddNote atau NoteDetail)
+  useFocusEffect(
+    useCallback(() => {
+      // setiap kali fokus, reload
+      loadNotes();
+      // tidak perlu cleanup
+      return undefined;
+    }, [])
+  );
+
+  // computed: filter berdasarkan chip + search
   const filteredNotes = useMemo(() => {
-    const base = activeChip === "Semua"
-      ? INITIAL_NOTES
-      : INITIAL_NOTES.filter((n) => n.category === activeChip);
-
+    const base = activeChip === "Semua" ? notes : notes.filter((n) => n.category === activeChip);
     if (!searchText || searchText.trim() === "") return base;
-
     const q = searchText.toLowerCase();
-    return base.filter(
-      (n) => (n.title + " " + n.body).toLowerCase().includes(q)
-    );
-  }, [activeChip, searchText]);
+    return base.filter((n) => (n.title + " " + n.body).toLowerCase().includes(q));
+  }, [notes, activeChip, searchText]);
+
+  // navigasi ke detail — NoteDetail akan menerima { note }
+  const openDetail = (note) => navigation.navigate("NoteDetail", { note });
+
+  // Floating Add button handler
+  const goAdd = () => navigation.navigate("AddNote");
 
   return (
     <View style={styles.container}>
@@ -100,64 +116,68 @@ export default function NotesList() {
         <Ionicons name="options" size={22} color={PRIMARY_BLUE} />
       </View>
 
-      <ScrollView
-        style={styles.mainScroll}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 80 }}
-      >
-        {/* CHIPS */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.chipScroll}
-        >
-          {chips.map((chip) => (
-            <TouchableOpacity
-              key={chip}
-              onPress={() => setActiveChip(chip)}
-              style={[styles.chip, activeChip === chip && styles.chipActive]}
-              accessibilityRole="button"
-              accessibilityState={{ selected: activeChip === chip }}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  activeChip === chip && styles.chipTextActive,
-                ]}
-              >
-                {chip}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* NOTES */}
-        <View style={styles.noteList}>
-          {filteredNotes.length === 0 ? (
-            <Text style={styles.emptyText}>Tidak ada catatan ditemukan.</Text>
-          ) : (
-            filteredNotes.map((note, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={styles.card}
-                activeOpacity={0.85}
-                onPress={() => navigation.navigate("NoteDetail", { note })}
-                accessibilityRole="button"
-              >
-                <Text style={styles.cardTitle}>{note.title}</Text>
-
-                {/* tampilkan hanya 2 baris di list */}
-                <Text style={styles.cardBody} numberOfLines={2}>
-                  {note.body}
-                </Text>
-
-                <Text style={styles.cardTime}>{note.time}</Text>
-              </TouchableOpacity>
-            ))
-          )}
+      {loading ? (
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator size="large" color={PRIMARY_BLUE} />
         </View>
-      </ScrollView>
+      ) : (
+        <ScrollView
+          style={styles.mainScroll}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 140 }}
+        >
+          {/* CHIPS */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.chipScroll}
+            contentContainerStyle={{ paddingRight: 16 }}
+          >
+            {chips.map((chip) => (
+              <TouchableOpacity
+                key={chip}
+                onPress={() => setActiveChip(chip)}
+                style={[styles.chip, activeChip === chip && styles.chipActive]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: activeChip === chip }}
+              >
+                <Text style={[styles.chipText, activeChip === chip && styles.chipTextActive]}>
+                  {chip}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
 
+          {/* NOTES */}
+          <View style={styles.noteList}>
+            {filteredNotes.length === 0 ? (
+              <Text style={styles.emptyText}>Tidak ada catatan ditemukan.</Text>
+            ) : (
+              filteredNotes.map((note) => (
+                <TouchableOpacity
+                  key={note.id || note.title}
+                  style={styles.card}
+                  activeOpacity={0.85}
+                  onPress={() => openDetail(note)}
+                >
+                  <Text style={styles.cardTitle}>{note.title}</Text>
+                  <Text style={styles.cardBody} numberOfLines={2}>
+                    {note.body}
+                  </Text>
+                  <Text style={styles.cardTime}>{note.time}</Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        </ScrollView>
+      )}
+
+      {/* FLOATING ADD BUTTON */}
+      <TouchableOpacity style={styles.floatingAddButton} onPress={goAdd} activeOpacity={0.85}>
+        <Ionicons name="add" size={34} color="white" />
+      </TouchableOpacity>
+
+      {/* BOTTOM TAB BAR */}
       <BottomNavigationBar current="NotesList" />
     </View>
   );
@@ -219,4 +239,24 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: "bold", color: PRIMARY_BLUE },
   cardBody: { marginTop: 5, fontSize: 14, color: "#333" },
   cardTime: { marginTop: 8, fontSize: 12, color: "#777" },
+
+  floatingAddButton: {
+    position: "absolute",
+    bottom: 80,
+    right: 20,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: PRIMARY_BLUE,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    zIndex: 999,
+    borderWidth: 3,
+    borderColor: "white",
+  },
 });

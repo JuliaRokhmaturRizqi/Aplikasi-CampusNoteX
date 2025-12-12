@@ -10,8 +10,12 @@ import {
   StatusBar,
   SafeAreaView,
   Platform,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const STORAGE_KEY = "CAMPUSNOTEX_NOTES_v1";
 
 const COLORS = {
   primary: "#0D47A1",
@@ -110,9 +114,54 @@ export default function NoteDetail({ navigation, route }) {
     time: "",
     category: "Umum",
     attachment: null,
+    id: null,
   };
 
   const chunks = parseAndRender(note.body);
+
+  // Hapus catatan: konfirmasi dulu, lalu hapus dari AsyncStorage (jika ada)
+  const handleDelete = async () => {
+    Alert.alert(
+      "Hapus catatan",
+      "Apakah Anda yakin ingin menghapus catatan ini?",
+      [
+        { text: "Batal", style: "cancel" },
+        {
+          text: "Hapus",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const raw = await AsyncStorage.getItem(STORAGE_KEY);
+              if (!raw) {
+                // jika tidak ada storage, tetap kembali ke daftar
+                navigation.navigate("NotesList");
+                return;
+              }
+
+              const arr = JSON.parse(raw);
+              let newArr;
+
+              if (note.id) {
+                newArr = arr.filter((n) => n.id !== note.id);
+              } else {
+                // fallback: cocokkan berdasarkan title + time
+                newArr = arr.filter((n) => !(n.title === note.title && n.time === note.time));
+              }
+
+              await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newArr));
+              // navigasi kembali ke NotesList dan beri notifikasi
+              navigation.navigate("NotesList");
+              Alert.alert("Berhasil", "Catatan telah dihapus.");
+            } catch (e) {
+              console.warn("delete err", e);
+              Alert.alert("Gagal", "Terjadi kesalahan saat menghapus catatan.");
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -138,7 +187,7 @@ export default function NoteDetail({ navigation, route }) {
               <Text style={styles.badgeText}>{note.category || "Umum"}</Text>
             </View>
 
-            <TouchableOpacity onPress={() => { /* future delete */ }}>
+            <TouchableOpacity onPress={handleDelete}>
               <Ionicons name="trash-outline" size={24} color={COLORS.redIcon} />
             </TouchableOpacity>
           </View>
