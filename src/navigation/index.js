@@ -9,7 +9,9 @@ import Register from "../screens/Auth/Register";
 import RegisterMahasiswa from "../screens/Auth/RegisterMahasiswa";
 
 import Home from "../screens/Home/Home";
-import Catatan from "../screens/Catatan";
+import NotesList from "../screens/Notes/NotesList";
+import NotesDetail from "../screens/Notes/NotesDetail";
+import EditNote from "../screens/Notes/EditNote";
 
 
 
@@ -27,7 +29,11 @@ export default function AppNavigator() {
         component={Home}
         options={{ headerShown: false }}
       />
-      <Stack.Screen name="Catatan" component={Catatan} />
+      <Stack.Screen name="NotesList" component={NotesList} />
+      <Stack.Screen name="NoteDetail" component={NotesDetail} />
+      <Stack.Screen name="EditNote" component={require('../screens/Notes/EditNote').default} />
+
+
       {/* tambah screen lain nanti */}
     </Stack.Navigator>
   );

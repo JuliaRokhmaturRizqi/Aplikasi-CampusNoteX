@@ -35,13 +35,13 @@ const BottomNavigationBar = () => {
 
       {/* CATATAN */}
       <TouchableOpacity
-        style={current === "Catatan" ? styles.activeIconContainer : styles.iconContainer}
-        onPress={() => navigation.navigate("Catatan")}
+        style={current === "Noteslist" ? styles.activeIconContainer : styles.iconContainer}
+        onPress={() => navigation.navigate("NotesList")}
       >
         <FontAwesome5
           name="edit"
           size={24}
-          color={current === "Catatan" ? PRIMARY_BLUE : "white"}
+          color={current === "Noteslist" ? PRIMARY_BLUE : "white"}
         />
       </TouchableOpacity>
 

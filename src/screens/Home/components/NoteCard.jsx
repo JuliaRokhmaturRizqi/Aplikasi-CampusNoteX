@@ -29,7 +29,7 @@ const NoteCard = () => {
           time="2 jam yang lalu"
         />
 
-        <TouchableOpacity onPress={() => navigation.navigate('Catatan')}>
+        <TouchableOpacity onPress={() => navigation.navigate('NotesList')}>
           <Text style={styles.linkText}>Lihat semua</Text>
         </TouchableOpacity>
       </View>
