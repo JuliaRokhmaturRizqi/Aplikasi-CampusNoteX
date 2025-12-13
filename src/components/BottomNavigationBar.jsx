@@ -1,7 +1,7 @@
 // src/components/BottomNavigationBar.jsx
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 
 const PRIMARY_BLUE = '#0D47A1';
@@ -35,13 +35,13 @@ const BottomNavigationBar = () => {
 
       {/* CATATAN */}
       <TouchableOpacity
-        style={current === "Noteslist" ? styles.activeIconContainer : styles.iconContainer}
-        onPress={() => navigation.navigate("NotesList")}
+        style={current === "NotesList" ? styles.activeIconContainer : styles.iconContainer}
+        onPress={() => go("NotesList")}
       >
         <FontAwesome5
           name="edit"
           size={24}
-          color={current === "Noteslist" ? PRIMARY_BLUE : "white"}
+          color={current === "NotesList" ? PRIMARY_BLUE : "white"}
         />
       </TouchableOpacity>
 
@@ -90,23 +90,27 @@ const styles = StyleSheet.create({
     backgroundColor: PRIMARY_BLUE,
     flexDirection: 'row',
     justifyContent: 'space-around',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     height: 70,
-    paddingHorizontal: 10,
     paddingBottom: 10,
-    
   },
+
+  // ikon normal
   iconContainer: {
-    padding: 10,
+    padding: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+
+  // ikon aktif dengan background putih seperti screenshot kamu
   activeIconContainer: {
-    padding: 18,
-    marginTop: 10,
     backgroundColor: 'white',
-    borderRadius: 0,
-    height: 70,
-    
-  }
+    padding: 20,
+    borderRadius: 10,
+    marginBottom: 10, // membuat kartu naik sedikit
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
 
 export default BottomNavigationBar;

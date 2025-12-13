@@ -11,7 +11,9 @@ import RegisterMahasiswa from "../screens/Auth/RegisterMahasiswa";
 import Home from "../screens/Home/Home";
 import NotesList from "../screens/Notes/NotesList";
 import NotesDetail from "../screens/Notes/NotesDetail";
-
+import Schedule from "../screens/Schedule/Schedule";
+import Dashboard from "../screens/Dashboard/Dashboard";
+import Profile from "../screens/Profile/Profile";
 
 
 
@@ -33,7 +35,13 @@ export default function AppNavigator() {
       <Stack.Screen name="NoteDetail" component={NotesDetail} />
       <Stack.Screen name="EditNote" component={require('../screens/Notes/EditNote').default} />
       <Stack.Screen name="AddNote" component={require('../screens/Notes/AddNote').default} />
-
+      <Stack.Screen name="Jadwal" component={Schedule} />
+      <Stack.Screen
+  name="Dashboard"
+  component={Dashboard}
+  options={{ headerShown: false }}
+/>
+      <Stack.Screen name="Profile" component={Profile} />
 
       {/* tambah screen lain nanti */}
     </Stack.Navigator>
